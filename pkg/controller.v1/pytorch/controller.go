@@ -72,13 +72,17 @@ var (
 
 // PyTorchController is the type for PyTorchJob Controller, which manages
 // the lifecycle of PyTorchJobs.
+// 管理 PytorchJobs 的生命周期
 type PyTorchController struct {
+
+	// 继承一部分 tf-operator 的 JobController
 	jobcontroller.JobController
 
 	// jobClientSet is a clientset for CRD PyTorchJob.
 	jobClientSet jobclientset.Interface
 
 	// To allow injection of sync functions for testing.
+	// 允许注入同步功能进行测试
 	syncHandler func(string) (bool, error)
 
 	// To allow injection of updateStatus for testing.
@@ -101,6 +105,7 @@ type PyTorchController struct {
 }
 
 // NewPyTorchController returns a new PyTorchJob controller.
+// 返回一个新的 PyTorchJob 控制器对象
 func NewPyTorchController(
 	// This variable is for unstructured informer.
 	jobInformer jobinformersv1.PyTorchJobInformer,
@@ -182,6 +187,7 @@ func NewPyTorchController(
 // as syncing informer caches and starting workers. It will block until stopCh
 // is closed, at which point it will shutdown the workqueue and wait for
 // workers to finish processing their current work items.
+// 自定义 controller 的业务开发
 func (pc *PyTorchController) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer utilruntime.HandleCrash()
 	defer pc.WorkQueue.ShutDown()
@@ -219,6 +225,7 @@ func (pc *PyTorchController) runWorker() {
 
 // processNextWorkItem will read a single work item off the workqueue and
 // attempt to process it, by calling the syncHandler.
+// 从 WorkQueue 队列中取出单个工作项，尝试通过调用 syncHandler 处理
 func (pc *PyTorchController) processNextWorkItem() bool {
 	obj, quit := pc.WorkQueue.Get()
 	if quit {
@@ -259,6 +266,7 @@ func (pc *PyTorchController) processNextWorkItem() bool {
 	}
 
 	// Sync PyTorchJob to mapch the actual state to this desired state.
+	// 同步 PyTorchJob 实际状态映射到此
 	forget, err := pc.syncHandler(key)
 	if err == nil {
 		if forget {
@@ -273,7 +281,9 @@ func (pc *PyTorchController) processNextWorkItem() bool {
 	return true
 }
 
+// 入队
 func (pc *PyTorchController) enqueuePyTorchJob(job interface{}) {
+	// 入队前检查 DeletedFinalStateUnknown
 	key, err := KeyFunc(job)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for job object %#v: %v", job, err))
@@ -287,6 +297,7 @@ func (pc *PyTorchController) enqueuePyTorchJob(job interface{}) {
 // syncPyTorchJob syncs the job with the given key if it has had its expectations fulfilled, meaning
 // it did not expect to see any more of its pods/services created or deleted.
 // This function is not meant to be invoked concurrently with the same key.
+// 用给定的 key 来同步 PytorchJob
 func (pc *PyTorchController) syncPyTorchJob(key string) (bool, error) {
 	startTime := time.Now()
 	logger := pylogger.LoggerForKey(key)
@@ -321,6 +332,7 @@ func (pc *PyTorchController) syncPyTorchJob(key string) (bool, error) {
 
 	var reconcilePyTorchJobsErr error
 	if jobNeedsSync && job.DeletionTimestamp == nil {
+		// 启动 PytorchJob
 		reconcilePyTorchJobsErr = pc.reconcilePyTorchJobs(job)
 	}
 
@@ -333,6 +345,8 @@ func (pc *PyTorchController) syncPyTorchJob(key string) (bool, error) {
 
 // reconcilePyTorchJobs checks and updates replicas for each given PyTorchReplicaSpec.
 // It will requeue the job in case of an error while creating/deleting pods/services.
+// 检查并更新每个给定的 PyTorchReplicaSpec 的副本；
+// 在 pods/services 创建/删除出现错误的时候会重新排队
 func (pc *PyTorchController) reconcilePyTorchJobs(job *pyv1.PyTorchJob) error {
 	jobKey, err := KeyFunc(job)
 	if err != nil {
@@ -465,6 +479,7 @@ func (pc *PyTorchController) reconcilePyTorchJobs(job *pyv1.PyTorchJob) error {
 
 		// Diff current active pods/services with replicas.
 		for rtype, spec := range job.Spec.PyTorchReplicaSpecs {
+			// 启动相应的 Pod
 			err = pc.reconcilePods(job, pods, rtype, spec, replicasStatus)
 			if err != nil {
 				logger.Warnf("reconcilePods error %v", err)
@@ -475,6 +490,7 @@ func (pc *PyTorchController) reconcilePyTorchJobs(job *pyv1.PyTorchJob) error {
 			if rtype != pyv1.PyTorchReplicaTypeMaster {
 				continue
 			}
+			// 启动相应的 service
 			err = pc.reconcileServices(job, services, rtype, spec)
 
 			if err != nil {

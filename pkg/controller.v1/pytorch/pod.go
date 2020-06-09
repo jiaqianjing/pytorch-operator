@@ -80,6 +80,7 @@ func (pc *PyTorchController) reconcilePods(
 			if rtype == pyv1.PyTorchReplicaTypeMaster {
 				masterRole = true
 			}
+			// 创建 Pod
 			err = pc.createNewPod(job, rtype, strconv.Itoa(index), spec, masterRole)
 			if err != nil {
 				return err
@@ -137,6 +138,7 @@ func getPodSlices(pods []*v1.Pod, replicas int, logger *log.Entry) [][]*v1.Pod {
 }
 
 // createNewPod creates a new pod for the given index and type.
+// 根据给定的索引和类型创建一个新的pod。
 func (pc *PyTorchController) createNewPod(job *pyv1.PyTorchJob, rtype pyv1.PyTorchReplicaType, index string, spec *common.ReplicaSpec, masterRole bool) error {
 	rt := strings.ToLower(string(rtype))
 	jobKey, err := KeyFunc(job)
@@ -173,7 +175,7 @@ func (pc *PyTorchController) createNewPod(job *pyv1.PyTorchJob, rtype pyv1.PyTor
 	for key, value := range labels {
 		podTemplate.Labels[key] = value
 	}
-
+	//
 	if err := setClusterSpec(podTemplate, job, totalReplicas, index, rtype); err != nil {
 		return err
 	}
@@ -200,6 +202,9 @@ func (pc *PyTorchController) createNewPod(job *pyv1.PyTorchJob, rtype pyv1.PyTor
 	// if gang-scheduling is enabled:
 	// 1. if user has specified other scheduler, we report a warning without overriding any fields.
 	// 2. if no SchedulerName is set for pods, then we set the SchedulerName to "kube-batch".
+	// 如果开启了 gang-scheduling:
+	// 1. 如果用户指定了其他 scheduler, 直接给出报错信息
+	// 2. 如果未为 Pod 设置 SchedulerName，则将 SchedulerName 设置为“ kube-batch”。
 	if pc.Config.EnableGangScheduling {
 		if pc.isNonGangSchedulerSet(job) {
 			errMsg := "Another scheduler is specified when gang-scheduling is enabled and it will not be overwritten"
@@ -214,7 +219,7 @@ func (pc *PyTorchController) createNewPod(job *pyv1.PyTorchJob, rtype pyv1.PyTor
 		}
 		podTemplate.Annotations[gangSchedulingPodGroupAnnotation] = jobcontroller.GenPodGroupName(job.Name)
 	}
-
+	// 使用集群配置信息，真正启动 Pod 的创建
 	err = pc.PodControl.CreatePodsWithControllerRef(job.Namespace, podTemplate, job, controllerRef)
 	if err != nil && k8serrors.IsTimeout(err) {
 		// Pod is created but its initialization has timed out.
@@ -231,6 +236,7 @@ func (pc *PyTorchController) createNewPod(job *pyv1.PyTorchJob, rtype pyv1.PyTor
 	return nil
 }
 
+// 设置集群配置，如：MASTER_PORT、 MASTER_ADDR、WORLD_SIZE 等环境变量
 func setClusterSpec(podTemplateSpec *v1.PodTemplateSpec, job *pyv1.PyTorchJob, totalReplicas int32, index string, rtype pyv1.PyTorchReplicaType) error {
 	rank, err := strconv.Atoi(index)
 	if err != nil {

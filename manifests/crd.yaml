@@ -1,6 +1,7 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
+  # metadata.name的内容是由"复数名.分组名"构成，如下，pytorchjobs 是复数名，kubeflow.org是分组名
   name: pytorchjobs.kubeflow.org
 spec:
   additionalPrinterColumns:
@@ -10,21 +11,30 @@ spec:
   - JSONPath: .metadata.creationTimestamp
     name: Age
     type: date
+  # 分组名，在REST API中也会用到的，格式是: /apis/分组名/CRD版本
   group: kubeflow.org
   names:
+    # 类型名
     kind: PyTorchJob
+    # 复数名
     plural: pytorchjobs
+    # 单数名
     singular: pytorchjob
+  # CRD 作用范围是 namespace 的，删除了 namespace, 其下面的所有资源都将被删除
   scope: Namespaced
   subresources:
     status: {}
+  # validation 是 Kubernetes v1.16 [stable] 支持的新特性
   validation:
+    # openAPIV3Schema is the schema for validating custom objects.
     openAPIV3Schema:
       properties:
         spec:
           properties:
             pytorchReplicaSpecs:
               properties:
+                # Master 即为 rank 0 节点， pytorch 官方支持的分布式应用不是 PS-Worker 架构的分布式作业，
+                # 集群有且只存在一个 rank0 节点，协调其他节点相互通信即可
                 Master:
                   properties:
                     replicas:
@@ -36,6 +46,7 @@ spec:
                     replicas:
                       minimum: 1
                       type: integer
+  # 列出当前 crd 支持的版本
   versions:
   - name: v1
     served: true
