@@ -175,13 +175,15 @@ func (pc *PyTorchController) createNewPod(job *pyv1.PyTorchJob, rtype pyv1.PyTor
 	for key, value := range labels {
 		podTemplate.Labels[key] = value
 	}
-	//
+	// 设置集群配置，如环境变量
 	if err := setClusterSpec(podTemplate, job, totalReplicas, index, rtype); err != nil {
 		return err
 	}
 
 	// Submit a warning event if the user specifies restart policy for
 	// the pod template. We recommend to set it from the replica level.
+	// 如果用户为Pod模板指定重启策略，则提交警告事件. （pod 指定的重启策略将会被 replica 中的策略覆盖）
+	// 我们建议对 replica 进行设置重启策略
 	if podTemplate.Spec.RestartPolicy != v1.RestartPolicy("") {
 		errMsg := "Restart policy in pod template will be overwritten by restart policy in replica spec"
 		logger.Warning(errMsg)
@@ -219,7 +221,7 @@ func (pc *PyTorchController) createNewPod(job *pyv1.PyTorchJob, rtype pyv1.PyTor
 		}
 		podTemplate.Annotations[gangSchedulingPodGroupAnnotation] = jobcontroller.GenPodGroupName(job.Name)
 	}
-	// 使用集群配置信息，真正启动 Pod 的创建
+	// 使用集群配置信息，真正启动 Pod 的创建， 通过调用 k8s 接口创建 pod
 	err = pc.PodControl.CreatePodsWithControllerRef(job.Namespace, podTemplate, job, controllerRef)
 	if err != nil && k8serrors.IsTimeout(err) {
 		// Pod is created but its initialization has timed out.
