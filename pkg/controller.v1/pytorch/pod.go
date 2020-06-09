@@ -147,7 +147,7 @@ func getPodSlices(pods []*v1.Pod, replicas int, logger *log.Entry) [][]*v1.Pod {
 }
 
 // createNewPod creates a new pod for the given index and type.
-// 根据给定的索引和类型创建一个新的 pod.
+// 根据索引和 replica 类型创建一个新的 pod.
 func (pc *PyTorchController) createNewPod(job *pyv1.PyTorchJob, rtype pyv1.PyTorchReplicaType, index string, spec *common.ReplicaSpec, masterRole bool) error {
 	rt := strings.ToLower(string(rtype))
 	jobKey, err := KeyFunc(job)
@@ -174,6 +174,8 @@ func (pc *PyTorchController) createNewPod(job *pyv1.PyTorchJob, rtype pyv1.PyTor
 		labels[jobcontroller.JobRoleLabel] = "master"
 	}
 	podTemplate := spec.Template.DeepCopy()
+
+	// 获取 PyTorchJob 总 pods 的副本数
 	totalReplicas := getTotalReplicas(job)
 	// Set name for the template.
 	// pod 的 名字： jobName-relicaType-index, 例如：pytorch-dist-mnist-gloo-master-0
@@ -249,7 +251,8 @@ func (pc *PyTorchController) createNewPod(job *pyv1.PyTorchJob, rtype pyv1.PyTor
 	return nil
 }
 
-// 设置集群配置，如：MASTER_PORT、 MASTER_ADDR、WORLD_SIZE 等环境变量
+// 设置集群配置，如：
+// MASTER_PORT、 MASTER_ADDR、WORLD_SIZE（master 节点也参与计算，因此 WORLD_SIZE= master + worker 的总副本数） 等环境变量
 func setClusterSpec(podTemplateSpec *v1.PodTemplateSpec, job *pyv1.PyTorchJob, totalReplicas int32, index string, rtype pyv1.PyTorchReplicaType) error {
 	rank, err := strconv.Atoi(index)
 	if err != nil {
@@ -263,11 +266,14 @@ func setClusterSpec(podTemplateSpec *v1.PodTemplateSpec, job *pyv1.PyTorchJob, t
 
 	masterAddr := jobcontroller.GenGeneralName(job.Name, strings.ToLower(string(pyv1.PyTorchReplicaTypeMaster)), strconv.Itoa(0))
 	if rtype == pyv1.PyTorchReplicaTypeMaster {
+		// master
 		if rank != 0 {
+			// 这里注明了 master 的 index 只能为 0, 也就是 master 的副本数只能为 1
 			return errors.New("invalid config: There should be only a single master with index=0")
 		}
 		masterAddr = "localhost"
 	} else {
+		// worker 节点对应的非 rank0 节点，因此 rank 号是自身 pod 的 index+1
 		rank = rank + 1
 	}
 

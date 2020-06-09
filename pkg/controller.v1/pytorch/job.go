@@ -210,6 +210,7 @@ func (pc *PyTorchController) deletePyTorchJob(job *pyv1.PyTorchJob) error {
 	return pc.jobClientSet.KubeflowV1().PyTorchJobs(job.Namespace).Delete(job.Name, &metav1.DeleteOptions{})
 }
 
+// 返回 PyTorchJob replicas 总数： Master + Worker
 func getTotalReplicas(job *pyv1.PyTorchJob) int32 {
 	jobReplicas := int32(0)
 	for _, r := range job.Spec.PyTorchReplicaSpecs {

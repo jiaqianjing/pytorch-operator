@@ -137,6 +137,7 @@ func NewPyTorchController(
 	pc.initContainerImage = option.InitContainerImage
 	pc.JobController = jc
 	// Set sync handler.
+	// 设置同步处理逻辑
 	pc.syncHandler = pc.syncPyTorchJob
 	pc.updateStatusHandler = pc.updatePyTorchJobStatus
 	// set delete handler.
@@ -297,7 +298,9 @@ func (pc *PyTorchController) enqueuePyTorchJob(job interface{}) {
 // syncPyTorchJob syncs the job with the given key if it has had its expectations fulfilled, meaning
 // it did not expect to see any more of its pods/services created or deleted.
 // This function is not meant to be invoked concurrently with the same key.
-// 用给定的 key 来同步 PytorchJob
+// 如果 PyTorchJob 的期望值已经实现了， 那么 syncPyTorchJob, 那么该方法就会用给定的 key 来同步 PytorchJob
+// 这意味它不希望更多 pod/service 被创建/删除
+// 这个方法不能与同一个key同时调用
 func (pc *PyTorchController) syncPyTorchJob(key string) (bool, error) {
 	startTime := time.Now()
 	logger := pylogger.LoggerForKey(key)
@@ -328,6 +331,7 @@ func (pc *PyTorchController) syncPyTorchJob(key string) (bool, error) {
 	jobNeedsSync := pc.satisfiedExpectations(job)
 
 	// Set default for the new job.
+	// 为新 pytorchjob 设置默认值
 	scheme.Scheme.Default(job)
 
 	var reconcilePyTorchJobsErr error

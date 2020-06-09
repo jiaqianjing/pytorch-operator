@@ -35,9 +35,12 @@ func GetPortFromPyTorchJob(job *pyv1.PyTorchJob, rtype pyv1.PyTorchReplicaType) 
 	containers := job.Spec.PyTorchReplicaSpecs[rtype].Template.Spec.Containers
 	for _, container := range containers {
 		if container.Name == pyv1.DefaultContainerName {
+			// container 的名字是否是 "pytorch";
+			// 对于 replicaType 是 worker 的 pod 总共有两个 container, 一个是 "pytorch" 一个是 "init-pytorch"
 			ports := container.Ports
 			for _, port := range ports {
 				if port.Name == pyv1.DefaultPortName {
+					// 只有 replicaType 是 master 的 pod 的 container 才有 ports, ports.Name 为 "pytorchjob-port"
 					return port.ContainerPort, nil
 				}
 			}
