@@ -44,6 +44,7 @@ func (pc *PyTorchController) reconcileServices(
 
 	replicas := int(*spec.Replicas)
 	// Get all services for the type rt.
+	// 获取所有 rt（master/worker） 类型的服务
 	services, err := pc.FilterServicesForReplicaType(services, rt)
 	if err != nil {
 		return err
@@ -70,6 +71,8 @@ func (pc *PyTorchController) reconcileServices(
 // getServiceSlices returns a slice, which element is the slice of service.
 // Assume the return object is serviceSlices, then serviceSlices[i] is an
 // array of pointers to services corresponding to Services for replica i.
+// 返回一个分片，该元素是服务的分片.
+// 设返回对象是 serviceSlices，则 serviceSlices[i] 是指向与 replica i 服务相对应的服务的指针数组。
 func getServiceSlices(services []*v1.Service, replicas int, logger *log.Entry) [][]*v1.Service {
 	serviceSlices := make([][]*v1.Service, replicas)
 	for _, service := range services {
@@ -92,6 +95,7 @@ func getServiceSlices(services []*v1.Service, replicas int, logger *log.Entry) [
 }
 
 // createNewService creates a new service for the given index and type.
+// 根据 PytorchJob 的参数， replica type 和 index 创建相应的 service template， 再调用 k8s 接口创建正真的 service
 func (pc *PyTorchController) createNewService(job *pyv1.PyTorchJob, rtype pyv1.PyTorchReplicaType, index string, spec *common.ReplicaSpec) error {
 	jobKey, err := KeyFunc(job)
 	if err != nil {
@@ -108,11 +112,15 @@ func (pc *PyTorchController) createNewService(job *pyv1.PyTorchJob, rtype pyv1.P
 	}
 
 	// Create OwnerReference.
+	// 给 service 设置 ownerReferences
 	controllerRef := pc.GenOwnerReference(job)
 
 	// Append replicaTypeLabel and replicaIndexLabel labels.
+	// 给 service 设置 labels
 	labels := pc.GenLabels(job.Name)
+	// 在 labels 中追加 replica type: master, 如："pytorch-replica-type": "master"
 	labels[replicaTypeLabel] = rt
+	// 在 labels 中追加 index，如："pytorch-replica-index": "0"
 	labels[replicaIndexLabel] = index
 
 	port, err := GetPortFromPyTorchJob(job, rtype)
@@ -136,6 +144,7 @@ func (pc *PyTorchController) createNewService(job *pyv1.PyTorchJob, rtype pyv1.P
 	service.Name = jobcontroller.GenGeneralName(job.Name, rt, index)
 	service.Labels = labels
 
+	// 把 service template 数据传到 k8s 接口，创建 service
 	err = pc.ServiceControl.CreateServicesWithControllerRef(job.Namespace, service, job, controllerRef)
 	if err != nil && errors.IsTimeout(err) {
 		// Service is created but its initialization has timed out.
