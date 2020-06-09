@@ -46,6 +46,7 @@ const (
 
 // reconcilePods checks and updates pods for each given PyTorchReplicaSpec.
 // It will requeue the job in case of an error while creating/deleting pods.
+// PytorchRelica Type 就两类， Master / Worker
 func (pc *PyTorchController) reconcilePods(
 	job *pyv1.PyTorchJob,
 	pods []*v1.Pod,
@@ -57,6 +58,7 @@ func (pc *PyTorchController) reconcilePods(
 	logger := pylogger.LoggerForReplica(job, rt)
 
 	// Get all pods for the type rt.
+	// 获取所有 master or worker 的 Pods 数组
 	pods, err := pc.FilterPodsForReplicaType(pods, rt)
 	if err != nil {
 		return err
@@ -65,6 +67,7 @@ func (pc *PyTorchController) reconcilePods(
 	restart := false
 	masterRole := false
 
+	// 初始化 PyTorchJob 的 Status.ReplicaStatuses = {"Master":, "Worker": }
 	initializePyTorchReplicaStatuses(job, rtype)
 
 	podSlices := getPodSlices(pods, replicas, logger)
@@ -80,7 +83,7 @@ func (pc *PyTorchController) reconcilePods(
 			if rtype == pyv1.PyTorchReplicaTypeMaster {
 				masterRole = true
 			}
-			// 创建 Pod
+			// replica 创建对应 index 的 Pod
 			err = pc.createNewPod(job, rtype, strconv.Itoa(index), spec, masterRole)
 			if err != nil {
 				return err
@@ -116,9 +119,14 @@ func (pc *PyTorchController) reconcilePods(
 }
 
 // getPodSlices returns a slice, which element is the slice of pod.
+// 假如这个 PyTorchJob  worker 有 3 个:
+//     正常情况：[[pod-worker-0] [pod-worker-1] [pod-worker-2]]
+//     异常情况：[[pod-worker-0 pod-worker-0-another] [pod-worker-1] [pod-worker-2]]
 func getPodSlices(pods []*v1.Pod, replicas int, logger *log.Entry) [][]*v1.Pod {
 	podSlices := make([][]*v1.Pod, replicas)
 	for _, pod := range pods {
+		// 每一个 pod 的 labels 中同一个 PyTorchJob 的同一个 replica pods 都有一个从 0 开始的 index,
+		// 例如：pod.Labels['pytorch-replica-index'] = "0"
 		if _, ok := pod.Labels[replicaIndexLabel]; !ok {
 			logger.Warning("The pod do not have the index label.")
 			continue
@@ -131,6 +139,7 @@ func getPodSlices(pods []*v1.Pod, replicas int, logger *log.Entry) [][]*v1.Pod {
 		if index < 0 || index >= replicas {
 			logger.Warningf("The label index is not expected: %d", index)
 		} else {
+			// [[pod-worker-0], [pod-worker-1], [pod-worker-2]]
 			podSlices[index] = append(podSlices[index], pod)
 		}
 	}
@@ -138,7 +147,7 @@ func getPodSlices(pods []*v1.Pod, replicas int, logger *log.Entry) [][]*v1.Pod {
 }
 
 // createNewPod creates a new pod for the given index and type.
-// 根据给定的索引和类型创建一个新的pod。
+// 根据给定的索引和类型创建一个新的 pod.
 func (pc *PyTorchController) createNewPod(job *pyv1.PyTorchJob, rtype pyv1.PyTorchReplicaType, index string, spec *common.ReplicaSpec, masterRole bool) error {
 	rt := strings.ToLower(string(rtype))
 	jobKey, err := KeyFunc(job)
@@ -161,11 +170,13 @@ func (pc *PyTorchController) createNewPod(job *pyv1.PyTorchJob, rtype pyv1.PyTor
 	labels[replicaIndexLabel] = index
 
 	if masterRole {
+		// 如果是 master 的 pod， 在 labels 中添加 "job-role": "master"
 		labels[jobcontroller.JobRoleLabel] = "master"
 	}
 	podTemplate := spec.Template.DeepCopy()
 	totalReplicas := getTotalReplicas(job)
 	// Set name for the template.
+	// pod 的 名字： jobName-relicaType-index, 例如：pytorch-dist-mnist-gloo-master-0
 	podTemplate.Name = jobcontroller.GenGeneralName(job.Name, rt, index)
 
 	if podTemplate.Labels == nil {

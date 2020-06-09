@@ -159,6 +159,15 @@ func updatePyTorchJobConditions(job *pyv1.PyTorchJob, conditionType common.JobCo
 }
 
 // initializePyTorchReplicaStatuses initializes the PyTorchReplicaStatuses for replica.
+// 为 PyTorchJob Status 初始化：
+// job.Status.ReplicaStatuses = {
+//	"Master": {
+//		"Active": , "Succeeded": , "Failed":
+//		},
+//  "Worker": {
+//		"Active": , "Succeeded": , "Failed":
+//		},
+//	}
 func initializePyTorchReplicaStatuses(job *pyv1.PyTorchJob, rtype pyv1.PyTorchReplicaType) {
 	commonType := common.ReplicaType(rtype)
 	if job.Status.ReplicaStatuses == nil {

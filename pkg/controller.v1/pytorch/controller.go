@@ -479,7 +479,7 @@ func (pc *PyTorchController) reconcilePyTorchJobs(job *pyv1.PyTorchJob) error {
 
 		// Diff current active pods/services with replicas.
 		for rtype, spec := range job.Spec.PyTorchReplicaSpecs {
-			// 启动相应的 Pod
+			// 启动相应 replica 的 Pod
 			err = pc.reconcilePods(job, pods, rtype, spec, replicasStatus)
 			if err != nil {
 				logger.Warnf("reconcilePods error %v", err)
