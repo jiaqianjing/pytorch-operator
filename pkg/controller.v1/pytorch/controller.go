@@ -377,6 +377,7 @@ func (pc *PyTorchController) reconcilePyTorchJobs(job *pyv1.PyTorchJob) error {
 	}
 
 	// If the PyTorchJob is terminated, delete all pods and services.
+	// 如果 PyTorchJob terminated, 就删除所有的 pod 和  master 的 service （worker 没有创建 service）
 	if isSucceeded(job.Status) || isFailed(job.Status) {
 		if err := pc.deletePodsAndServices(job, pods, services); err != nil {
 			return err
@@ -407,6 +408,7 @@ func (pc *PyTorchController) reconcilePyTorchJobs(job *pyv1.PyTorchJob) error {
 	}
 
 	// retrieve the previous number of retry
+	// 检索以前的重试次数
 	previousRetry := pc.WorkQueue.NumRequeues(jobKey)
 
 	activePods := k8sutil.FilterActivePods(pods)
