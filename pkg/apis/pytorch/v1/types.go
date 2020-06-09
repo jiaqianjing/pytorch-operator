@@ -61,7 +61,8 @@ type PyTorchJobSpec struct {
 
 	// Defines the policy for cleaning up pods after the PyTorchJob completes.
 	// Defaults to None.
-	// 定义 PyTorchJob 任务结束后 pods 的清理策略，默认值： None
+	// 定义 PyTorchJob 任务结束后 pods 的清理策略;
+	// 默认值： None
 	CleanPodPolicy *common.CleanPodPolicy `json:"cleanPodPolicy,omitempty"`
 
 	// Defines the TTL for cleaning up finished PyTorchJobs (temporary
@@ -69,8 +70,9 @@ type PyTorchJobSpec struct {
 	// It may take extra ReconcilePeriod seconds for the cleanup, since
 	// reconcile gets called periodically.
 	// Defaults to infinite.
-	// 默认值：无限时间，作业结束也不删除 PytorchJobs； 定义了对已经结束的作业，清理 PyTorchJobs 的生存时间（在 k8s 添加清理控制器之前是临时的）
+	// 定义了对已经结束的作业，清理 PyTorchJobs 的生存时间（在 k8s 添加清理控制器之前是临时的）
 	// 清理可能需要再加上额外执行 ReconcilePeriod 轮询的时间
+	// 默认值：无限时间，作业结束也不删除 PytorchJobs；
 	TTLSecondsAfterFinished *int32 `json:"ttlSecondsAfterFinished,omitempty"`
 
 	// A map of PyTorchReplicaType (type) to ReplicaSpec (value). Specifies the PyTorch cluster configuration.
