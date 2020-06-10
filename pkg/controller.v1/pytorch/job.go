@@ -181,6 +181,7 @@ func (pc *PyTorchController) deletePodsAndServices(job *pyv1.PyTorchJob, pods []
 	return nil
 }
 
+// 如果 ttl 不设置，则不清理，否则 ttl s 后，执行删除 PyTorchJob
 func (pc *PyTorchController) cleanupPyTorchJob(job *pyv1.PyTorchJob) error {
 	currentTime := time.Now()
 	ttl := job.Spec.TTLSecondsAfterFinished
