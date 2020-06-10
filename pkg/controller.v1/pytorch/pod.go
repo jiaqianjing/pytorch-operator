@@ -90,19 +90,24 @@ func (pc *PyTorchController) reconcilePods(
 			}
 		} else {
 			// Check the status of the current pod.
+			// 对应的 index 已经存在一个 pod 了
 			pod := podSlice[0]
 			// Check if the pod is retryable.
+			// 判断当前 pod 的重启策略是否是 ExitCode, 事实上应该走不到这一步，因为 PyTorchJob replica 会将重启策略
+			// 为 "ExitCode" 强制改成 "Never"
 			if spec.RestartPolicy == common.RestartPolicyExitCode {
 				var exitCode int32
 				for _, status := range pod.Status.ContainerStatuses {
 					state := status.State
 					// Get the exit code of the pytorch container.
+					// 取回 replica 类型为 worker 的 pod 的 name 为 pytorch 的 container 的退出码;
 					if status.Name == pyv1.DefaultContainerName && state.Terminated != nil {
 						exitCode = state.Terminated.ExitCode
 						logger.Infof("Pod: %v.%v exited with code %v", pod.Namespace, pod.Name, exitCode)
 						pc.Recorder.Eventf(job, v1.EventTypeNormal, exitedWithCodeReason, "Pod: %v.%v exited with code %v", pod.Namespace, pod.Name, exitCode)
 					}
 				}
+				// 如果 pod 的状态是 Failed, 取回 container 的返回码，返回码是： 130 137 138 143 重新创建 Pod
 				if pod.Status.Phase == v1.PodFailed && train_util.IsRetryableExitCode(exitCode) {
 					logger.Infof("Need to restart the pod: %v.%v", pod.Namespace, pod.Name)
 					if err := pc.PodControl.DeletePod(pod.Namespace, pod.Name, job); err != nil {
@@ -178,7 +183,7 @@ func (pc *PyTorchController) createNewPod(job *pyv1.PyTorchJob, rtype pyv1.PyTor
 	// 获取 PyTorchJob 总 pods 的副本数
 	totalReplicas := getTotalReplicas(job)
 	// Set name for the template.
-	// pod 的 名字： jobName-relicaType-index, 例如：pytorch-dist-mnist-gloo-master-0
+	// pod 的 名字： jobName-replicaType-index, 例如：pytorch-dist-mnist-gloo-master-0
 	podTemplate.Name = jobcontroller.GenGeneralName(job.Name, rt, index)
 
 	if podTemplate.Labels == nil {
