@@ -56,7 +56,7 @@ type PyTorchJobSpec struct {
 
 	// Number of retries before marking this job as failed.
 	// +optional
-	// 可选，设置 pod 标记为 failed 之前的重试次数
+	// 可选，设置 pod 标记为 failed 之前的重试次数, omitempty 关键字忽略，转 json 的时候，如果没有设置 BackoffLimit 即忽略
 	BackoffLimit *int32 `json:"backoffLimit,omitempty"`
 
 	// Defines the policy for cleaning up pods after the PyTorchJob completes.

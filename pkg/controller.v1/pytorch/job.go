@@ -167,6 +167,7 @@ func (pc *PyTorchController) deletePodsAndServices(job *pyv1.PyTorchJob, pods []
 		}
 	}
 
+	// 只需要为 Master 创建 service
 	rt := strings.ToLower(string(pyv1.PyTorchReplicaTypeMaster))
 	services, err := pc.FilterServicesForReplicaType(services, rt)
 	if err != nil {

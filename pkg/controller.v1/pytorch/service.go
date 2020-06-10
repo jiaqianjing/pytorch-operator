@@ -44,7 +44,7 @@ func (pc *PyTorchController) reconcileServices(
 
 	replicas := int(*spec.Replicas)
 	// Get all services for the type rt.
-	// 获取所有 rt（master/worker） 类型的服务
+	// 获取所有 master 类型的 replica 服务
 	services, err := pc.FilterServicesForReplicaType(services, rt)
 	if err != nil {
 		return err

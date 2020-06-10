@@ -203,7 +203,10 @@ func (pc *PyTorchController) createNewPod(job *pyv1.PyTorchJob, rtype pyv1.PyTor
 		pc.Recorder.Event(job, v1.EventTypeWarning, podTemplateRestartPolicyReason, errMsg)
 	}
 	setRestartPolicy(podTemplate, spec)
+
+	// worker 节点的 pod 的设置
 	if !masterRole {
+		// 如果 worker 节点， masterAddr 用 "job.Name-master-0" 替换 "localhost"
 		masterAddr := jobcontroller.GenGeneralName(job.Name, strings.ToLower(string(pyv1.PyTorchReplicaTypeMaster)), strconv.Itoa(0))
 		err := AddInitContainerForWorkerPod(podTemplate, InitContainerParam{
 			MasterAddr:         masterAddr,
