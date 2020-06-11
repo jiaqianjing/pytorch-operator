@@ -540,6 +540,8 @@ func (pc *PyTorchController) satisfiedExpectations(job *pyv1.PyTorchJob) bool {
 
 // pastBackoffLimit checks if container restartCounts sum exceeds BackoffLimit
 // this method applies only to pods with restartPolicy == OnFailure or Always
+// 检查 container 的重启次数总数是否超过了设置 BackoffLimit
+// 该方法仅适用 pod 的重启策略为 "OnFailure" or "Always"
 func (pc *PyTorchController) pastBackoffLimit(job *pyv1.PyTorchJob, pods []*v1.Pod) (bool, error) {
 	if job.Spec.BackoffLimit == nil {
 		return false, nil
