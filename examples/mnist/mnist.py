@@ -12,7 +12,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 WORLD_SIZE = int(os.environ.get('WORLD_SIZE', 1))
+CURRENT_RANK = int(os.environ.get('RANK', 99))
 
+print("WORLD_SIZE: {}, CURRENT_RANK: {}".format(WORLD_SIZE, CURRENT_RANK))
 
 class Net(nn.Module):
     def __init__(self):
