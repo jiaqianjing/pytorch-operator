@@ -3,6 +3,7 @@ kind: "PyTorchJob"
 metadata:
   name: "pytorch-dist-mnist-gloo"
 spec:
+  cleanPodPolicy: "None"
   pytorchReplicaSpecs:
     Master:
       replicas: 1
@@ -13,9 +14,10 @@ spec:
             - name: pytorch
               # image: gcr.io/<your_project>/pytorch_dist_mnist:latest
               image: registry.cn-huhehaote.aliyuncs.com/lumo/pytorch-dist-mnist-test:1.0
+              imagePullPolicy: Always
               args: ["--backend", "gloo"]
               # Comment out the below resources to use the CPU.
-              resources: 
+              resources:
                 limits:
                   nvidia.com/gpu: 1
     Worker:
@@ -23,12 +25,13 @@ spec:
       restartPolicy: OnFailure
       template:
         spec:
-          containers: 
+          containers:
             - name: pytorch
               # image: gcr.io/<your_project>/pytorch_dist_mnist:latest
               image: registry.cn-huhehaote.aliyuncs.com/lumo/pytorch-dist-mnist-test:1.0
+              imagePullPolicy: Always
               args: ["--backend", "gloo"]
               # Comment out the below resources to use the CPU.
-              resources: 
+              resources:
                 limits:
                   nvidia.com/gpu: 1
